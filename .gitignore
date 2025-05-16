@@ -165,3 +165,4 @@ checkpoints/
 logs/
 sta.pth
 .vscode/
+sta.pth
