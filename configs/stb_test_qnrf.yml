@@ -20,7 +20,7 @@ model:
 train_dataset: &train_dataset_params
   name: 'den_cls'
   params: 
-    root: 'data/stb'
+    root: '/scratch/jianyong/MPCount/data/stb'
     crop_size: 320
     downsample: 1
     is_grey: False
@@ -30,7 +30,7 @@ val_dataset: *train_dataset_params
 test_dataset:
   name: 'den_cls'
   params: 
-    root: 'data/sta'
+    root: '/scratch/jianyong/MPCount/data/qnrf'
     crop_size: 320
     downsample: 1
     is_grey: False

@@ -1,0 +1,79 @@
+seed: 2022
+version: fewshot_cl
+device: 'cuda:0'
+log_para: 1000
+mode: 'final'
+patch_size: 10000
+
+# Training parameters
+source_epochs: 500  # Source domain pretraining epochs
+target_epochs: 200  # Target domain fine-tuning epochs
+eval_interval: 1    # Evaluation interval (evaluate every N epochs)
+
+# Learning rates
+source_lr: 1e-4     # Source domain learning rate
+target_lr: 5e-5     # Target domain learning rate
+
+# Continual learning parameters
+memory_size: 200    # Memory buffer size
+replay_batch_size: 16  # Replay batch size
+reservoir_sampling: True  # Whether to use reservoir sampling
+replay_weight: 0.5  # Weight for replay loss
+
+# Source domain datasets (for pretraining, large dataset)
+source_dataset:
+  - name: 'den_cls'
+    params: 
+      root: '/scratch/jianyong/MPCount/data/sta'
+      crop_size: 320
+      downsample: 1
+      is_grey: False
+      unit_size: 16
+      pre_resize: 1
+  
+  - name: 'den_cls'
+    params: 
+      root: '/scratch/jianyong/MPCount/data/stb'
+      crop_size: 320
+      downsample: 1
+      is_grey: False
+      unit_size: 16
+      pre_resize: 1
+
+# Target domain datasets (for few-shot learning, select few samples)
+target_dataset:
+  - name: 'den_cls'
+    params: 
+      root: '/scratch/jianyong/MPCount/data/jhu'
+      crop_size: 320
+      downsample: 1
+      is_grey: False
+      unit_size: 16
+      pre_resize: 1
+
+
+# Data loader configuration
+source_loader:
+  batch_size: 4
+  num_workers: 4
+  shuffle: True
+  pin_memory: True
+
+target_loader:
+  batch_size: 2
+  num_workers: 2
+  shuffle: True
+  pin_memory: True
+
+# Model configuration
+model:
+  name: 'final'
+  params:
+    pretrained: True
+    mem_size: 1024
+    mem_dim: 256
+    cls_thrs: 0.5
+    err_thrs: 0.5
+    den_dropout: 0.5
+    cls_dropout: 0.3
+    has_err_loss: False 

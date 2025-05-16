@@ -528,10 +528,10 @@ def run_ucsd2(origin_dir, save_dir, min_size, max_size):
                 np.save(gd_save_path, points)
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='Test ')
-    parser.add_argument('--origin-dir', default='E:\Dataset\Counting\jhu_crowd_v2.0',
+    parser = argparse.ArgumentParser(description='Train')
+    parser.add_argument('--origin-dir', default='/scratch/jianyong/jhu_crowd_v2.0',
                         help='original data directory')
-    parser.add_argument('--data-dir', default='/home/teddy/UCF-Train-Val-Test',
+    parser.add_argument('--data-dir', default='/scratch/jianyong/MPCount/data/jhu',
                         help='processed data directory')
     parser.add_argument('--min-size', default=512, type=int,
                         help='minimum image size')

@@ -1,0 +1,64 @@
+seed: 2022
+version: fewshot
+device: 'cuda:0'
+log_para: 1000
+mode: 'final'
+patch_size: 10000
+
+# 源域数据集（用于预训练，数据量大）
+source_dataset:
+  - name: 'den_cls'
+    params: 
+      root: '/home/jianyong/exp/MPCount/data/sha'
+      crop_size: 320
+      downsample: 1
+      is_grey: False
+      unit_size: 16
+      pre_resize: 1
+  
+  - name: 'den_cls'
+    params: 
+      root: '/home/jianyong/exp/MPCount/data/shb'
+      crop_size: 320
+      downsample: 1
+      is_grey: False
+      unit_size: 16
+      pre_resize: 1
+
+# 目标域数据集（用于Few-shot学习，选择少量样本）
+target_dataset:
+  - name: 'jhu_domain_cls'
+    params: 
+      root: '/home/jianyong/exp/MPCount/data/jhu_reorganized'
+      domain: 'fog'  # 'street', 'stadium', 'snow', 'fog'
+      split: 'train'
+      scale: 0.5
+      downsample: 4
+      augmentation: True
+      method: 'train'
+
+# 数据加载器配置
+source_loader:
+  batch_size: 4
+  num_workers: 4
+  shuffle: True
+  pin_memory: True
+
+target_loader:
+  batch_size: 2
+  num_workers: 2
+  shuffle: True
+  pin_memory: True
+
+# 模型配置
+model:
+  name: 'final'
+  params:
+    pretrained: True
+    mem_size: 1024
+    mem_dim: 256
+    cls_thrs: 0.5
+    err_thrs: 0.5
+    den_dropout: 0.5
+    cls_dropout: 0.3
+    has_err_loss: False 

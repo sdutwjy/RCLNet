@@ -128,7 +128,7 @@ class DensityMapDataset(BaseDataset):
         return img, gt, dmap
 
 if __name__ == '__main__':
-    dataset = DensityMapDataset('/mnt/home/zpengac/USERDIR/Crowd_counting/datasets/sta', 16, 1, 'train', False, 1)
+    dataset = DensityMapDataset('/scratch/jianyong/MPCount/data/sta', 16, 1, 'train', False, 1)
 
     count = 0
     has_crowd = 0

@@ -1,10 +1,10 @@
-seed: 2023
+seed: 2010
 version: sta
 device: 'cuda:0'
 log_para: 1000
 patch_size: 10000
 mode: 'final'
-num_epochs: 180
+num_epochs: 300
 checkpoint: null
 model:
   name: 'final'
@@ -20,7 +20,7 @@ model:
 train_dataset: &train_dataset_params
   name: 'den_cls'
   params: 
-    root: 'data/sta'
+    root: '/scratch/jianyong/MPCount/data/sta'
     crop_size: 320
     downsample: 1
     is_grey: False
@@ -30,7 +30,7 @@ val_dataset: *train_dataset_params
 test_dataset:
   name: 'den_cls'
   params: 
-    root: '/mnt/home/zpengac/USERDIR/Crowd_counting/datasets/stb'
+    root: '/scratch/jianyong/MPCount/data/sta'
     crop_size: 320
     downsample: 1
     is_grey: False
