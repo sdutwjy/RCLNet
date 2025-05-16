@@ -163,3 +163,5 @@ few_shot_cl/
 incremental_learning.pytorch/
 checkpoints/
 logs/
+sta.pth
+.vscode/

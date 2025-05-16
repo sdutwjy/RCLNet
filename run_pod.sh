@@ -1,7 +1,7 @@
 #!/bin/bash
 # 运行PODNet持续学习方法的脚本
 
-python main_cl_jhu_pod.py \
+CUDA_VISIBLE_DEVICES=1 python main_cl_jhu_pod.py \
     --datasets "fog,snow,stadium,street" \
     --model_type "final" \
     --epochs_per_task 10 \
