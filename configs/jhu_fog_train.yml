@@ -9,7 +9,7 @@ patch_size: 10000
 # 持续学习参数
 memory_size: 200
 replay_batch_size: 16
-batch_size: 1
+batch_size: 4
 epochs_per_task: 5
 n_seeds: 1
 n_trials: 1
@@ -17,36 +17,9 @@ lr: 0.0001
 
 # 支持的数据集列表
 train_dataset: &train_dataset_params
-  - name: 'den_cls'
-    params: 
+  name: 'den_cls'
+  params: 
       root: '/scratch/jianyong/MPCount/data/jhu_reorganized/fog'
-      crop_size: 320
-      downsample: 1
-      is_grey: False
-      unit_size: 16
-      pre_resize: 1
-  
-  - name: 'den_cls'
-    params: 
-      root: '/scratch/jianyong/MPCount/data/jhu_reorganized/snow'
-      crop_size: 320
-      downsample: 1
-      is_grey: False
-      unit_size: 16
-      pre_resize: 1
-      
-  - name: 'den_cls'
-    params: 
-      root: '/scratch/jianyong/MPCount/data/jhu_reorganized/stadium'
-      crop_size: 320
-      downsample: 1
-      is_grey: False
-      unit_size: 16
-      pre_resize: 1
-
-  - name: 'den_cls'
-    params: 
-      root: '/scratch/jianyong/MPCount/data/jhu_reorganized/street'
       crop_size: 320
       downsample: 1
       is_grey: False
@@ -55,36 +28,9 @@ train_dataset: &train_dataset_params
 val_dataset: *train_dataset_params
 
 test_dataset:
-  - name: 'den_cls'
-    params: 
+  name: 'den_cls'
+  params: 
       root: '/scratch/jianyong/MPCount/data/jhu_reorganized/fog'
-      crop_size: 320
-      downsample: 1
-      is_grey: False
-      unit_size: 16
-      pre_resize: 1
-  
-  - name: 'den_cls'
-    params: 
-      root: '/scratch/jianyong/MPCount/data/jhu_reorganized/snow'
-      crop_size: 320
-      downsample: 1
-      is_grey: False
-      unit_size: 16
-      pre_resize: 1
-      
-  - name: 'den_cls'
-    params: 
-      root: '/scratch/jianyong/MPCount/data/jhu_reorganized/stadium'
-      crop_size: 320
-      downsample: 1
-      is_grey: False
-      unit_size: 16
-      pre_resize: 1
-
-  - name: 'den_cls'
-    params: 
-      root: '/scratch/jianyong/MPCount/data/jhu_reorganized/street'
       crop_size: 320
       downsample: 1
       is_grey: False

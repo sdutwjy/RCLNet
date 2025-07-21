@@ -1,5 +1,5 @@
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 import argparse
 import time
 import copy
@@ -118,33 +118,91 @@ def reservoir_update(buffer, sample, counter, max_size):
             buffer[replace_idx] = sample
     return counter
 
-# Sample from memory buffer
-def sample_from_memory(memory_buffer, replay_batch_size, custom_probs, device):
+# 添加新的采样策略函数
+def get_sampling_probabilities(memory_buffer, strategy, params=None):
     """
-    Sample replay_batch_size examples from the memory buffer.
-
+    根据指定的策略生成采样概率
+    
     Args:
-        memory_buffer: List of memory samples.
-        replay_batch_size: Number of samples to draw.
-        custom_probs: Custom probability vector for sampling; if None, uniform sampling is used.
-        device: Device (CPU/GPU) to move the sampled tensors to.
-
+        memory_buffer: 记忆缓冲区
+        strategy: 采样策略名称
+        params: 策略的额外参数
+        
     Returns:
-        sampled_imgs: Sampled image tensor.
-        sampled_gt_dens: Sampled density map tensor.
-        sampled_meta: Sampled metadata.
+        numpy array: 概率分布
+    """
+    buffer_size = len(memory_buffer)
+    if buffer_size == 0:
+        return None
+        
+    if strategy == 'uniform':
+        # 均匀采样
+        return np.ones(buffer_size) / buffer_size
+    
+    elif strategy == 'random':
+        # 随机概率
+        probs = np.random.rand(buffer_size)
+        return probs / np.sum(probs)
+    
+    elif strategy == 'count_weighted':
+        # 根据样本中的人数加权
+        weights = []
+        for img, den, meta in memory_buffer:
+            if isinstance(meta, dict) and 'count' in meta:
+                count = meta['count']
+                if isinstance(count, torch.Tensor):
+                    count = count.item()
+                weights.append(float(count) if count is not None else 1.0)
+            else:
+                weights.append(1.0)
+        
+        weights = np.array(weights)
+        if params and 'power' in params:
+            # 应用幂次调整
+            power = params['power']
+            weights = np.power(weights, power)
+        
+        # 避免除以零
+        weights_sum = np.sum(weights)
+        if weights_sum > 0:
+            return weights / weights_sum
+        else:
+            return np.ones(buffer_size) / buffer_size
+    
+    elif strategy == 'recency_weighted':
+        # 根据样本的添加顺序加权，最近添加的样本权重更高
+        weights = np.linspace(0.5, 1.0, buffer_size)  # 线性增加的权重
+        return weights / np.sum(weights)
+    
+    else:
+        # 默认使用均匀采样
+        return np.ones(buffer_size) / buffer_size
+
+# 修改sample_from_memory函数
+def sample_from_memory(memory_buffer, replay_batch_size, sampling_strategy, sampling_params=None, device='cuda'):
+    """
+    从记忆缓冲区采样
+    
+    Args:
+        memory_buffer: 记忆缓冲区
+        replay_batch_size: 采样数量
+        sampling_strategy: 采样策略
+        sampling_params: 采样策略参数
+        device: 设备
+        
+    Returns:
+        采样的图像、密度图和元数据
     """
     if replay_batch_size <= 0 or len(memory_buffer) == 0:
         return torch.Tensor([]).to(device), torch.Tensor([]).to(device), {}
 
-    if custom_probs is not None:
-        # Use custom probability vector for sampling
-        probs = custom_probs[:len(memory_buffer)]
-        probs = probs / np.sum(probs)
-    else:
-        # Use uniform sampling
+    # 获取采样概率
+    probs = get_sampling_probabilities(memory_buffer, sampling_strategy, sampling_params)
+    if probs is None:
+        # 如果获取概率失败，使用均匀采样
         probs = np.ones(len(memory_buffer)) / len(memory_buffer)
 
+    # 根据概率采样
     chosen_indices = np.random.choice(
         len(memory_buffer),
         size=min(replay_batch_size, len(memory_buffer)),
@@ -165,7 +223,7 @@ def sample_from_memory(memory_buffer, replay_batch_size, custom_probs, device):
     sampled_imgs = torch.cat(sampled_imgs, dim=0).to(device)
     sampled_gt_dens = torch.cat(sampled_gt_dens, dim=0).to(device)
 
-    # 处理meta数据 - 修复以处理不同类型的meta数据
+    # 处理meta数据 - 保持原有的处理逻辑
     try:
         if isinstance(sampled_meta_list[0], dict) and 'count' in sampled_meta_list[0]:
             # 如果meta是包含count键的字典
@@ -257,8 +315,8 @@ def evaluate_performance(model, dataset, device, collate_fn):
     
     return {'mae': mae, 'rmse': rmse}
 
-# 训练循环
-def train_and_evaluate_trial(cfg, args, device, master_seed, trial_custom_probs):
+# 修改train_and_evaluate_trial函数
+def train_and_evaluate_trial(cfg, args, device, master_seed):
     # 设置随机种子
     random.seed(master_seed)
     torch.manual_seed(master_seed)
@@ -358,11 +416,12 @@ def train_and_evaluate_trial(cfg, args, device, master_seed, trial_custom_probs)
                     
                     # 记忆重放步骤
                     if len(memory_buffer) > 0 and args.replay_batch_size > 0:
-                        # 从记忆中采样
+                        # 从记忆中采样，使用指定的采样策略
                         replay_images, replay_gt_dens, replay_meta = sample_from_memory(
                             memory_buffer,
                             args.replay_batch_size,
-                            trial_custom_probs,
+                            args.sampling_strategy,
+                            {'power': args.count_power} if args.sampling_strategy == 'count_weighted' else None,
                             device
                         )
                         
@@ -468,7 +527,7 @@ def train_and_evaluate_trial(cfg, args, device, master_seed, trial_custom_probs)
                         'task_id': task_id,
                         'mae': perf_current['mae'],
                         'rmse': perf_current['rmse']
-                    }, f'checkpoints/task_{task_id}_best.pth')
+                    }, f'checkpoints/uniform/task_{task_id}_best.pth')
                     print(f"保存任务 {task_id} 的最佳模型，MAE: {perf_current['mae']:.2f}")
                 
                 print(f"  Epoch {epoch+1}/{args.epochs_per_task}, Task {task_id}, MAE = {perf_current['mae']:.2f}, RMSE = {perf_current['rmse']:.2f}")
@@ -575,8 +634,8 @@ def train_and_evaluate_trial(cfg, args, device, master_seed, trial_custom_probs)
         'forgetting_vals': forgetting_vals,
         'avg_final_mae': avg_final_mae,
         'avg_final_rmse': avg_final_rmse
-    }, 'checkpoints/final_model.pth')
-    print("\n保存最终模型到 checkpoints/final_model.pth")
+    }, 'checkpoints/uniform/final_model.pth')
+    print("\n保存最终模型到 checkpoints/uniform/final_model.pth")
     
     # 记录总体指标
     if clearml_logger:
@@ -616,7 +675,7 @@ def train_and_evaluate_trial(cfg, args, device, master_seed, trial_custom_probs)
         'avg_final_rmse': avg_final_rmse
     }
 
-# 主函数
+# 修改main函数
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--datasets", type=str, default="fog,snow,stadium,street", 
@@ -633,15 +692,18 @@ def main():
                         help="每个Task的训练Epoch数")
     parser.add_argument("--lr", type=float, default=1e-4, 
                         help="Learning rate")
-    parser.add_argument("--n_seeds", type=int, default=3, 
-                        help="Number of random seeds")
-    parser.add_argument("--n_trials", type=int, default=5, 
-                        help="Number of replay probability trials per seed")
+    parser.add_argument("--n_seeds", type=int, default=1, 
+                        help="随机种子数量")
+    parser.add_argument("--sampling_strategy", type=str, default="uniform", 
+                        choices=["uniform", "random", "count_weighted", "recency_weighted"],
+                        help="记忆回放的采样策略")
+    parser.add_argument("--count_power", type=float, default=0.75,
+                        help="count_weighted策略中的人数权重系数")
     parser.add_argument("--config", type=str, default="configs/jhu_domains_cl_config.yml", 
                         help="Config file path")
     parser.add_argument("--clearml_project", type=str, default="MPCount",
                         help="ClearML project name")
-    parser.add_argument("--clearml_task", type=str, default="JHU_ContinualLearning",
+    parser.add_argument("--clearml_task", type=str, default="JHU_ContinualLearning_no_AC_uniform",
                         help="ClearML task name")
     parser.add_argument("--use_clearml", action="store_true",
                         help="Whether to use ClearML for experiment tracking")
@@ -679,126 +741,85 @@ def main():
             cfg['test_loader']['num_workers'] = min(1, cfg['test_loader']['num_workers'])
     
     # 初始化ClearML
-    task_name=join(args.clearml_task, args.model_type, args.datasets.replace(',', '_'))
+    task_name = join(args.clearml_task, args.model_type, args.datasets.replace(',', '_'), args.sampling_strategy)
     clearml_logger = CustomClearML('MPCount', task_name)
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(vars(args))
-    print("Using device:", device)
+    print("使用设备:", device)
+    print(f"使用采样策略: {args.sampling_strategy}")
     
     overall_results = {}
     
     for seed in range(args.n_seeds):
         print("="*80)
-        print(f"Start the experiment with {seed}")
+        print(f"开始实验，种子 {seed}")
         master_seed = 1000 + seed
-        seed_trial_results = []
         
-        for trial in range(args.n_trials):
-            if trial == 0:
-                # Baseline：均匀采样
-                trial_custom_probs = None
-                print(f"\n--- Seed {seed}, trial {trial} (Baseline: Uniform sampling) ---")
-            else:
-                # 自定义概率向量
-                trial_custom_probs = np.random.rand(args.memory_size)
-                print(f"\n--- Seed {seed}, trial {trial} (Custom sampling) ---")
-            
-            results = train_and_evaluate_trial(cfg, args, device, master_seed, trial_custom_probs)
-            seed_trial_results.append(results['avg_final_mae'])
-            
-            # 在ClearML中记录每个trial的结果
-            if clearml_logger:
-                clearml_logger.report_scalar(
-                    title="Trial_Results",
-                    series=f"Seed_{seed}",
-                    value=results['avg_final_mae'],
-                    iteration=trial
-                )
+        # 直接使用选定的采样策略进行单次训练
+        print(f"\n--- 种子 {seed}, 采样策略: {args.sampling_strategy} ---")
+        results = train_and_evaluate_trial(cfg, args, device, master_seed)
         
         # 汇总本种子下的结果
-        baseline_mae = seed_trial_results[0]
-        best_trial_mae = np.min(seed_trial_results)
-        mean_trial_mae = np.mean(seed_trial_results)
+        mae = results['avg_final_mae']
+        rmse = results['avg_final_rmse']
         
-        print(f"\nseed {seed} Summary:")
-        print(f"  Baseline (task 0) MAE: {baseline_mae:.2f}")
-        print(f"  Best trial MAE: {best_trial_mae:.2f}")
-        print(f"  Mean trial MAE: {mean_trial_mae:.2f}")
+        print(f"\n种子 {seed} 结果汇总:")
+        print(f"  平均 MAE: {mae:.2f}")
+        print(f"  平均 RMSE: {rmse:.2f}")
         
         overall_results[seed] = {
-            "baseline": baseline_mae,
-            "best": best_trial_mae,
-            "mean": mean_trial_mae
+            "mae": mae,
+            "rmse": rmse
         }
         
-        # 在ClearML中记录每个种子的汇总结果
+        # 在ClearML中记录每个种子的结果
         if clearml_logger:
             clearml_logger.report_scalar(
-                title="Seed_Summary",
-                series="Baseline_MAE",
-                value=baseline_mae,
+                title="Seed_Results",
+                series="MAE",
+                value=mae,
                 iteration=seed
             )
             clearml_logger.report_scalar(
-                title="Seed_Summary",
-                series="Best_Trial_MAE",
-                value=best_trial_mae,
-                iteration=seed
-            )
-            clearml_logger.report_scalar(
-                title="Seed_Summary",
-                series="Mean_Trial_MAE",
-                value=mean_trial_mae,
+                title="Seed_Results",
+                series="RMSE",
+                value=rmse,
                 iteration=seed
             )
     
     # 计算总体统计
-    baseline_maes = [overall_results[s]["baseline"] for s in overall_results]
-    best_maes = [overall_results[s]["best"] for s in overall_results]
-    mean_maes = [overall_results[s]["mean"] for s in overall_results]
+    maes = [overall_results[s]["mae"] for s in overall_results]
+    rmses = [overall_results[s]["rmse"] for s in overall_results]
     
-    print("\n==== Overall results for all seeds ====")
-    print(f"Average baseline MAE: {np.mean(baseline_maes):.2f} ± {np.std(baseline_maes):.2f}")
-    print(f"Average Best trial MAE: {np.mean(best_maes):.2f} ± {np.std(best_maes):.2f}")
-    print(f"Average MAE: {np.mean(mean_maes):.2f} ± {np.std(mean_maes):.2f}")
+    print("\n==== 所有种子的总体结果 ====")
+    print(f"平均 MAE: {np.mean(maes):.2f} ± {np.std(maes):.2f}")
+    print(f"平均 RMSE: {np.mean(rmses):.2f} ± {np.std(rmses):.2f}")
     
     # 在ClearML中记录总体结果
     if clearml_logger:
         clearml_logger.report_scalar(
             title="Overall_Results",
-            series="Avg_Baseline_MAE",
-            value=np.mean(baseline_maes),
+            series="Avg_MAE",
+            value=np.mean(maes),
             iteration=0
         )
         clearml_logger.report_scalar(
             title="Overall_Results",
-            series="Avg_Best_Trial_MAE",
-            value=np.mean(best_maes),
+            series="Avg_RMSE",
+            value=np.mean(rmses),
             iteration=0
         )
         clearml_logger.report_scalar(
             title="Overall_Results",
-            series="Avg_Mean_Trial_MAE",
-            value=np.mean(mean_maes),
+            series="Std_MAE",
+            value=np.std(maes),
             iteration=0
         )
         clearml_logger.report_scalar(
             title="Overall_Results",
-            series="Std_Baseline_MAE",
-            value=np.std(baseline_maes),
-            iteration=0
-        )
-        clearml_logger.report_scalar(
-            title="Overall_Results",
-            series="Std_Best_Trial_MAE",
-            value=np.std(best_maes),
-            iteration=0
-        )
-        clearml_logger.report_scalar(
-            title="Overall_Results",
-            series="Std_Mean_Trial_MAE",
-            value=np.std(mean_maes),
+            series="Std_RMSE",
+            value=np.std(rmses),
             iteration=0
         )
 

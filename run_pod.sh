@@ -4,7 +4,7 @@
 CUDA_VISIBLE_DEVICES=1 python main_cl_jhu_pod.py \
     --datasets "fog,snow,stadium,street" \
     --model_type "final" \
-    --epochs_per_task 10 \
+    --epochs_per_task 5 \
     --lr 1e-4 \
     --config "configs/jhu_domains_cl_config.yml" \
     --use_clearml \

@@ -1,0 +1,111 @@
+# 基础配置
+seed: 42
+version: 'cl'
+mode: 'final'
+log_para: 1000
+patch_size: 10000
+
+# 模型配置
+model:
+  name: 'final'
+  params:
+    pretrained: true
+    backbone: 'resnet50'
+
+# 数据集配置
+train_dataset:
+  - name: 'jhu_domain'
+    params:
+      root: '/scratch/jianyong/MPCount/data/jhu_reorganized/fog'
+      method: 'train'
+      patch_size: 10000
+      log_para: 1000
+  - name: 'jhu_domain'
+    params:
+      root: '/scratch/jianyong/MPCount/data/jhu_reorganized/snow'
+      method: 'train'
+      patch_size: 10000
+      log_para: 1000
+  - name: 'jhu_domain'
+    params:
+      root: '/scratch/jianyong/MPCount/data/jhu_reorganized/stadium'
+      method: 'train'
+      patch_size: 10000
+      log_para: 1000
+  - name: 'jhu_domain'
+    params:
+      root: '/scratch/jianyong/MPCount/data/jhu_reorganized/street'
+      method: 'train'
+      patch_size: 10000
+      log_para: 1000
+
+val_dataset:
+  - name: 'jhu_domain'
+    params:
+      root: '/scratch/jianyong/MPCount/data/jhu_reorganized/fog'
+      method: 'val'
+      patch_size: 10000
+      log_para: 1000
+  - name: 'jhu_domain'
+    params:
+      root: '/scratch/jianyong/MPCount/data/jhu_reorganized/snow'
+      method: 'val'
+      patch_size: 10000
+      log_para: 1000
+  - name: 'jhu_domain'
+    params:
+      root: '/scratch/jianyong/MPCount/data/jhu_reorganized/stadium'
+      method: 'val'
+      patch_size: 10000
+      log_para: 1000
+  - name: 'jhu_domain'
+    params:
+      root: '/scratch/jianyong/MPCount/data/jhu_reorganized/street'
+      method: 'val'
+      patch_size: 10000
+      log_para: 1000
+
+test_dataset:
+  - name: 'jhu_domain'
+    params:
+      root: '/scratch/jianyong/MPCount/data/jhu_reorganized/fog'
+      method: 'test'
+      patch_size: 10000
+      log_para: 1000
+  - name: 'jhu_domain'
+    params:
+      root: '/scratch/jianyong/MPCount/data/jhu_reorganized/snow'
+      method: 'test'
+      patch_size: 10000
+      log_para: 1000
+  - name: 'jhu_domain'
+    params:
+      root: '/scratch/jianyong/MPCount/data/jhu_reorganized/stadium'
+      method: 'test'
+      patch_size: 10000
+      log_para: 1000
+  - name: 'jhu_domain'
+    params:
+      root: '/scratch/jianyong/MPCount/data/jhu_reorganized/street'
+      method: 'test'
+      patch_size: 10000
+      log_para: 1000
+
+# 数据加载器配置
+train_loader:
+  batch_size: 2
+  num_workers: 4
+  shuffle: true
+  pin_memory: false
+
+val_loader:
+  batch_size: 1
+  num_workers: 4
+  shuffle: false
+  pin_memory: false
+
+test_loader:
+  batch_size: 1
+  num_workers: 4
+  shuffle: false
+  pin_memory: false 

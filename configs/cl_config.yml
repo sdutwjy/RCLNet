@@ -3,7 +3,7 @@ version: cl
 device: 'cuda:0'
 log_para: 1000
 mode: 'final'
-num_epochs: 3000
+num_epochs: 1500
 patch_size: 10000
 
 # 持续学习参数
