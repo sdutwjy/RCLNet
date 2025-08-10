@@ -159,7 +159,7 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
-few_shot_cl/
+
 incremental_learning.pytorch/
 checkpoints/
 logs/
@@ -167,3 +167,34 @@ sta.pth
 .vscode/
 sta.pth
 sta.pth
+few_shot_cl/
+jhu_domains/
+logs/
+models/actor_critic.py
+process/
+base.py
+cl.py
+ewc.py
+forget_test.py
+icarl.py
+lwf_utils.py
+lwf.py
+main_cl_jhu_ac.py
+main_cl_jhu_domains.py
+main_cl_jhu_lwf.py
+main_cl_jhu_pod.py
+main_cl_jhu_mas.py
+main_cl_jhu.py
+main_cl.py
+main_fewshot_cl.py
+main_fewshot.py
+main_single_jhu.py
+mas.py
+podnet_utils.py
+podnet.py
+run_fewshot_cl.sh
+run_pod.sh
+street_duplicates.txt
+ucf_train.txt
+ucf_val.txt
+visual.py

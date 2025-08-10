@@ -1,4 +1,5 @@
 import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 import argparse
 import time
 import copy
@@ -109,7 +110,7 @@ def ewc_train_and_evaluate_trial(cfg, args, device, master_seed):
     best_perf_each_task = [{'mae': float('inf'), 'rmse': float('inf')} for _ in range(len(tasks_train))]
     final_perf_each_task = [{'mae': float('inf'), 'rmse': float('inf')} for _ in range(len(tasks_train))]
 
-    os.makedirs('checkpoints/ewc', exist_ok=True)
+    os.makedirs('checkpoints/ewc_ab', exist_ok=True)
     print(f"Number of training epochs for each Task: {args.epochs_per_task}")
 
     ewc_list = []
@@ -199,7 +200,7 @@ def ewc_train_and_evaluate_trial(cfg, args, device, master_seed):
                         'task_id': task_id,
                         'mae': perf_current['mae'],
                         'rmse': perf_current['rmse']
-                    }, f'checkpoints/ewc/task_{task_id}_best.pth')
+                    }, f'checkpoints/ewc_ab/task_{task_id}_best.pth')
                     print(f"保存任务 {task_id} 的最佳模型，MAE: {perf_current['mae']:.2f}")
                 print(f"  Epoch {epoch+1}/{args.epochs_per_task}, Task {task_id}, MAE = {perf_current['mae']:.2f}, RMSE = {perf_current['rmse']:.2f}")
                 if clearml_logger:
@@ -286,8 +287,8 @@ def ewc_train_and_evaluate_trial(cfg, args, device, master_seed):
         'forgetting_vals': forgetting_vals,
         'avg_final_mae': avg_final_mae,
         'avg_final_rmse': avg_final_rmse
-    }, 'checkpoints/ewc/final_model.pth')
-    print("\n保存最终模型到 checkpoints/ewc/final_model.pth")
+    }, 'checkpoints/ewc_ab/final_model.pth')
+    print("\n保存最终模型到 checkpoints/ewc_ab/final_model.pth")
     if clearml_logger:
         clearml_logger.report_scalar(
             title="Overall_Performance",
@@ -324,7 +325,7 @@ def ewc_train_and_evaluate_trial(cfg, args, device, master_seed):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--datasets", type=str, default="fog,snow,stadium,street", 
+    parser.add_argument("--datasets", type=str, default="sta,stb,qnrf", 
                         help="Comma-separated list of datasets to use")
     parser.add_argument("--model_type", type=str, default="final", 
                         choices=["mem", "final"], help="Model type")
@@ -332,11 +333,11 @@ def main():
                         help="每个Task的训练Epoch数")
     parser.add_argument("--lr", type=float, default=1e-4, 
                         help="Learning rate")
-    parser.add_argument("--config", type=str, default="configs/jhu_domains_cl_config.yml", 
+    parser.add_argument("--config", type=str, default="configs/cl_config.yml", 
                         help="Config file path")
     parser.add_argument("--clearml_project", type=str, default="MPCount",
                         help="ClearML project name")
-    parser.add_argument("--clearml_task", type=str, default="JHU_ContinualLearning_EWC",
+    parser.add_argument("--clearml_task", type=str, default="abqnrf_ContinualLearning_EWC",
                         help="ClearML task name")
     parser.add_argument("--use_clearml", action="store_true",
                         help="Whether to use ClearML for experiment tracking")
@@ -371,7 +372,7 @@ def main():
             cfg['test_loader']['num_workers'] = min(1, cfg['test_loader']['num_workers'])
     task_name=join(args.clearml_task, args.model_type, args.datasets.replace(',', '_'))
     clearml_logger = CustomClearML(args.clearml_project, task_name) if args.use_clearml else None
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda")
     print(vars(args))
     print("Using device:", device)
     master_seed = 1000
